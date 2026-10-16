@@ -1,0 +1,63 @@
+# Kaneo (project management) on the node's shared datastores.
+#
+# One container: the API (1337, internal) plus nginx serving the web app and
+# proxying /api, all on port 5173. It connects to:
+#
+#   Postgres  svnix-solutions/postgres_build, over the external "db" network
+#   Redis     svnix-solutions/redis_build, same network (optional; relays live
+#             updates between API instances -- harmless with one instance)
+#
+# Ingress is the shared "cloudflared" network: Nginx Proxy Manager or the
+# tunnel forwards the public hostname to http://kaneo:5173. The host port is
+# bound to loopback only, as a fallback.
+#
+# Provision the database once on the shared Postgres, as superuser:
+#   CREATE ROLE kaneo LOGIN PASSWORD '...';
+#   CREATE DATABASE kaneo OWNER kaneo;
+# The API runs its own migrations at startup; no extensions are needed.
+
+services:
+  kaneo:
+    image: ghcr.io/usekaneo/kaneo:${KANEO_VERSION:-2.46.2}
+    container_name: ${KANEO_CONTAINER_NAME:-kaneo}
+    restart: unless-stopped
+    env_file:
+      # Optional extras (SMTP, OAuth, S3, access policy) pass straight through.
+      - path: .env
+        required: false
+    environment:
+      # Public origin, e.g. https://kaneo.example.com. The entrypoint derives
+      # KANEO_API_URL as <this>/api and bakes it into the web assets.
+      KANEO_CLIENT_URL: ${KANEO_CLIENT_URL:?KANEO_CLIENT_URL is required}
+      # Explicit DATABASE_URL wins over POSTGRES_*; using a hex password keeps
+      # it URL-safe without encoding.
+      DATABASE_URL: postgresql://${KANEO_DB_USER:-kaneo}:${KANEO_DB_PASSWORD:?KANEO_DB_PASSWORD is required}@${KANEO_DB_HOST:-postgres}:${KANEO_DB_PORT:-5432}/${KANEO_DB_NAME:-kaneo}
+      # Required here even though the image would invent one: a generated
+      # secret changes on every restart and logs everyone out.
+      AUTH_SECRET: ${KANEO_AUTH_SECRET:?KANEO_AUTH_SECRET is required}
+      REDIS_URL: ${KANEO_REDIS_URL:-}
+      # Keep the instance closed after the first owner account exists.
+      DISABLE_REGISTRATION: ${KANEO_DISABLE_REGISTRATION:-false}
+    ports:
+      - "127.0.0.1:${KANEO_PORT:-5173}:5173"
+    # The image ships its own HEALTHCHECK (wget /api/health); repeated here so
+    # it is visible and tunable from Komodo.
+    healthcheck:
+      test: ["CMD", "wget", "-Y", "off", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:5173/api/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 60s
+      retries: 3
+    networks:
+      - db
+      - proxy
+
+networks:
+  # Shared Postgres + Redis. Create once: docker network create db
+  db:
+    name: ${DB_NETWORK:-db}
+    external: true
+  # Shared with cloudflared / Nginx Proxy Manager.
+  proxy:
+    name: ${PROXY_NETWORK:-cloudflared}
+    external: true
