@@ -50,7 +50,9 @@ the internal `proxy` network it shares with Nginx Proxy Manager, not the
    proxy host: live updates use them.
 
 5. Open the site and create the first account. It becomes the instance owner.
-   Then set `KANEO_DISABLE_REGISTRATION=true` and redeploy.
+   `KANEO_DISABLE_REGISTRATION=true` can be set from the start: Kaneo always
+   allows the first account, and invited users can still join. Guest access is
+   disabled by default (`KANEO_DISABLE_GUEST_ACCESS`).
 
 ---
 

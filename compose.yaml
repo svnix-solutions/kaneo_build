@@ -37,8 +37,11 @@ services:
       # secret changes on every restart and logs everyone out.
       AUTH_SECRET: ${KANEO_AUTH_SECRET:?KANEO_AUTH_SECRET is required}
       REDIS_URL: ${KANEO_REDIS_URL:-}
-      # Keep the instance closed after the first owner account exists.
+      # Kaneo always lets the FIRST account register (instance bootstrap), and
+      # invitation links keep working, so these are safe to set from day one.
       DISABLE_REGISTRATION: ${KANEO_DISABLE_REGISTRATION:-false}
+      # Anonymous guest sessions. Off unless explicitly enabled.
+      DISABLE_GUEST_ACCESS: ${KANEO_DISABLE_GUEST_ACCESS:-true}
     ports:
       - "127.0.0.1:${KANEO_PORT:-5173}:5173"
     # The image ships its own HEALTHCHECK (wget /api/health); repeated here so
