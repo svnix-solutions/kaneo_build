@@ -7,9 +7,10 @@
 #   Redis     svnix-solutions/redis_build, same network (optional; relays live
 #             updates between API instances -- harmless with one instance)
 #
-# Ingress is the shared "cloudflared" network: Nginx Proxy Manager or the
-# tunnel forwards the public hostname to http://kaneo:5173. The host port is
-# bound to loopback only, as a fallback.
+# Ingress: cloudflared -> Nginx Proxy Manager -> kaneo. Kaneo joins only the
+# internal "proxy" network it shares with NPM, never the "cloudflared" network
+# itself, so the tunnel connector cannot reach it directly. NPM forwards the
+# public hostname to http://kaneo:5173. The host port is loopback only.
 #
 # Provision the database once on the shared Postgres, as superuser:
 #   CREATE ROLE kaneo LOGIN PASSWORD '...';
@@ -57,7 +58,7 @@ networks:
   db:
     name: ${DB_NETWORK:-db}
     external: true
-  # Shared with cloudflared / Nginx Proxy Manager.
+  # Shared with Nginx Proxy Manager only. Create once: docker network create proxy
   proxy:
-    name: ${PROXY_NETWORK:-cloudflared}
+    name: ${PROXY_NETWORK:-proxy}
     external: true

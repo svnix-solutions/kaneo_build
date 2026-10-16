@@ -13,8 +13,11 @@ There is no bundled database. Kaneo uses:
 - **Redis** from [`redis_build`](https://github.com/svnix-solutions/redis_build)
   (optional; only relays live updates between multiple API instances)
 
-Both are reached by name over the external `db` network. Public traffic arrives
-over the `cloudflared` network, shared with the tunnel and Nginx Proxy Manager.
+Both are reached by name over the external `db` network.
+
+Public traffic flows cloudflared → Nginx Proxy Manager → kaneo. Kaneo joins only
+the internal `proxy` network it shares with Nginx Proxy Manager, not the
+`cloudflared` network, so the tunnel connector can't reach it directly.
 
 ---
 
@@ -24,7 +27,7 @@ over the `cloudflared` network, shared with the tunnel and Nginx Proxy Manager.
 
    ```bash
    docker network create db 2>/dev/null || true
-   docker network create cloudflared 2>/dev/null || true
+   docker network create proxy 2>/dev/null || true
    ```
 
 2. Provision the database on the shared Postgres:
@@ -43,7 +46,7 @@ over the `cloudflared` network, shared with the tunnel and Nginx Proxy Manager.
    `DATABASE_URL` unencoded.
 
 4. Deploy, then route the public hostname to `http://kaneo:5173` in Nginx Proxy
-   Manager (or directly in the tunnel). Set **Websockets Support** on the NPM
+   Manager. Set **Websockets Support** on the NPM
    proxy host: live updates use them.
 
 5. Open the site and create the first account. It becomes the instance owner.
