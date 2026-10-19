@@ -19,7 +19,8 @@
 
 services:
   kaneo:
-    image: ghcr.io/usekaneo/kaneo:${KANEO_VERSION:-2.46.2}
+    # Image source is swappable, e.g. a fork: KANEO_IMAGE=ghcr.io/svnix-solutions/kaneo
+    image: ${KANEO_IMAGE:-ghcr.io/usekaneo/kaneo}:${KANEO_VERSION:-2.46.2}
     container_name: ${KANEO_CONTAINER_NAME:-kaneo}
     restart: unless-stopped
     env_file:
